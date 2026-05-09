@@ -1,0 +1,11 @@
+[build]
+command = "pip install -r requirements.txt"
+
+[deploy]
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+[env]
+# These will be set in Railway dashboard
+GROQ_API_KEY = ""
+SECRET_KEY = ""
+DATABASE_URL = ""
