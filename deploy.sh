@@ -27,66 +27,89 @@ fi
 echo -e "${BLUE}📋 Starting deployment process...${NC}"
 echo ""
 
-# ── Step 1: Install dependencies ────────────────────────────────────
-echo -e "${YELLOW}📦 Installing dependencies...${NC}"
+# ── Step 1: Verify dependencies ────────────────────────────────────
+echo -e "${YELLOW}📦 Verifying deployment prerequisites...${NC}"
 echo ""
 
-# Frontend dependencies
-echo "Installing frontend dependencies..."
-cd frontend
-npm install
-cd ..
+# Check that required tools are installed
+echo "Checking required tools..."
 
-# Backend dependencies
-echo "Installing backend dependencies..."
-cd backend
-pip install -r requirements.txt
-cd ..
-
-echo -e "${GREEN}✅ Dependencies installed${NC}"
-echo ""
-
-# ── Step 2: Deploy Frontend to Vercel ──────────────────────────────
-echo -e "${YELLOW}🌐 Deploying frontend to Vercel...${NC}"
-echo ""
-
-if command -v vercel >/dev/null 2>&1; then
-    echo "Vercel CLI found. Deploying..."
-    cd frontend
-    vercel --prod
-    cd ..
-    echo -e "${GREEN}✅ Frontend deployed to Vercel${NC}"
-else
+if ! command -v vercel >/dev/null 2>&1; then
     echo -e "${RED}❌ Vercel CLI not found. Install it first:${NC}"
     echo "   npm install -g vercel"
     echo "   Then run: vercel login"
     exit 1
 fi
 
-echo ""
-
-# ── Step 3: Deploy Backend to Railway ───────────────────────────────
-echo -e "${YELLOW}🚂 Deploying backend to Railway...${NC}"
-echo ""
-
-if command -v railway >/dev/null 2>&1; then
-    echo "Railway CLI found. Deploying..."
-    cd backend
-    railway up
-    cd ..
-    echo -e "${GREEN}✅ Backend deployed to Railway${NC}"
-else
+if ! command -v railway >/dev/null 2>&1; then
     echo -e "${RED}❌ Railway CLI not found. Install it first:${NC}"
     echo "   npm install -g @railway/cli"
     echo "   Then run: railway login"
     exit 1
 fi
 
+# Check environment files
+if [ ! -f ".env" ]; then
+    echo -e "${RED}❌ Error: .env file not found${NC}"
+    echo "Please create your .env file with proper configuration"
+    exit 1
+fi
+
+if [ ! -f "frontend/.env.production" ]; then
+    echo -e "${YELLOW}⚠️  Warning: frontend/.env.production not found${NC}"
+    echo "Creating default production environment file..."
+    mkdir -p frontend
+    cat > frontend/.env.production << 'EOF'
+# Vercel Production Environment
+VITE_API_URL=https://your-railway-app.railway.app
+EOF
+fi
+
+echo -e "${GREEN}✅ All prerequisites met${NC}"
 echo ""
 
-# ── Step 4: Final Setup ──────────────────────────────────────────
+# ── Step 2: Build for production ────────────────────────────────────
+echo -e "${YELLOW}🏗️  Building for production...${NC}"
+echo ""
+
+echo "Building backend..."
+cd backend
+pip install --no-cache-dir -r requirements.txt
+cd ..
+
+echo "Building frontend..."
+cd frontend
+npm install --production
+npm run build
+cd ..
+
+echo -e "${GREEN}✅ Production build complete${NC}"
+echo ""
+
+# ── Step 3: Deploy Frontend to Vercel ──────────────────────────────
+echo -e "${YELLOW}🌐 Deploying frontend to Vercel...${NC}"
+echo ""
+
+cd frontend
+vercel --prod
+cd ..
+echo -e "${GREEN}✅ Frontend deployed to Vercel${NC}"
+echo ""
+
+# ── Step 4: Deploy Backend to Railway ───────────────────────────────
+echo -e "${YELLOW}🚂 Deploying backend to Railway...${NC}"
+echo ""
+
+cd backend
+railway up
+cd ..
+echo -e "${GREEN}✅ Backend deployed to Railway${NC}"
+echo ""
+
+# ── Step 5: Final Setup ──────────────────────────────────────────
 echo -e "${YELLOW}📝 Final setup steps:${NC}"
 echo ""
+
 echo "1. Get your Railway backend URL from the Railway dashboard"
 echo "2. Update vercel.json with your Railway URL:"
 echo "   - Edit the VITE_API_URL field"
@@ -94,6 +117,7 @@ echo "   - Replace 'your-railway-app' with your actual Railway app name"
 echo "3. Redeploy Vercel:"
 echo "   cd frontend && vercel --prod"
 echo ""
+
 echo -e "${BLUE}🎉 Deployment complete!${NC}"
 echo ""
 echo -e "${CYAN}Access your app:${NC}"

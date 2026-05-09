@@ -1,8 +1,8 @@
 [build]
-command = "pip install -r requirements.txt"
+command = "pip install -r requirements.railway.txt"
 
 [deploy]
-startCommand = "uvicorn backend.app.main:app --host 0.0.0.0 --port 8000"
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 
 [env]
 GROQ_API_KEY = "your_groq_api_key_here"
