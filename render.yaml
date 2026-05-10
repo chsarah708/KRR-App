@@ -1,0 +1,97 @@
+services:
+  - type: web
+    name: krr-backend
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: krr-db
+          property: DATABASE_URL
+      - key: REDIS_URL
+        fromService:
+          type: pserv
+          name: krr-redis
+          property: REDIS_URL
+      - key: CORS_ORIGINS
+        value: '["https://your-krr-frontend-url.onrender.com"]'
+    healthCheck:
+      path: /health
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    disk:
+      sizeGB: 10
+    envVarGroups:
+      - name: KRR-Backend
+        envVars:
+          - key: ENVIRONMENT
+            value: production
+          - key: SECRET_KEY
+            generateValue: true
+          - key: GROQ_API_KEY
+            sync: false
+          - key: DATABASE_URL
+            fromService:
+              type: pserv
+              name: krr-db
+              property: DATABASE_URL
+          - key: REDIS_URL
+            fromService:
+              type: pserv
+              name: krr-redis
+              property: REDIS_URL
+          - key: CORS_ORIGINS
+            value: '["https://your-krr-frontend-url.onrender.com"]'
+  - type: pserv
+    name: krr-db
+    runtime: docker
+    image: postgres:15-alpine
+    envVars:
+      - key: POSTGRES_DB
+        value: krr_db
+      - key: POSTGRES_USER
+        value: krr_user
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+    data:
+      name: krr-db-data
+      sizeGB: 1
+    plan: free
+  - type: pserv
+    name: krr-redis
+    runtime: docker
+    image: redis:7-alpine
+    plan: free
+  - type: web
+    name: krr-frontend
+    runtime: node
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm run preview"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_URL
+        value: https://krr-backend.onrender.com
+      - key: VITE_API_BASE_URL
+        value: https://krr-backend.onrender.com
+    publicPath: /
+    disk:
+      sizeGB: 1
+    envVarGroups:
+      - name: KRR-Frontend
+        envVars:
+          - key: NODE_ENV
+            value: production
+          - key: VITE_API_URL
+            value: https://krr-backend.onrender.com
+          - key: VITE_API_BASE_URL
+            value: https://krr-backend.onrender.com
